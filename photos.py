@@ -1,5 +1,4 @@
 import re
-from datetime import date, datetime
 from hashlib import sha256
 from html import unescape
 from io import BytesIO
@@ -10,9 +9,8 @@ from PIL import Image, ImageOps
 from upstream import get_json, request_bytes
 
 APOD = "https://science.nasa.gov"
-EPIC = "https://epic.gsfc.nasa.gov"
-PHOTO_HOSTS = {"assets.science.nasa.gov", "apod.nasa.gov", "epic.gsfc.nasa.gov"}
-NASA_CREDITS = {"NASA", "NASA/JPL", "NASA/JPL-Caltech", "NASA/GSFC", "NASA Goddard"}
+ARTICLE_HOSTS = {"science.nasa.gov", "apod.nasa.gov"}
+PHOTO_HOSTS = {"assets.science.nasa.gov", "science.nasa.gov", "apod.nasa.gov"}
 IMAGE_LIMIT = 20 * 1024 * 1024
 
 
@@ -27,59 +25,26 @@ def nasa_url(value, hosts):
     return url.scheme == "https" and url.netloc in hosts
 
 
-def apod_photo(day):
+def apod_entries(day):
     fields = "date,media_type,hdurl,title,alt,permalink,credit,copyright"
-    entries = get_json(f"{APOD}/wp-json/wp/v2/apod-basic?per_page=7&_fields={fields}")
-    for entry in entries:
-        credit = clean_text(entry.get("credit"))
-        link = entry.get("permalink")
-        image = entry.get("hdurl")
-        if (
-            entry.get("date") == day.isoformat()
-            and entry.get("media_type") == "image"
-            and not clean_text(entry.get("copyright"))
-            and credit in NASA_CREDITS
-            and nasa_url(link, {"science.nasa.gov", "apod.nasa.gov"})
-            and nasa_url(image, PHOTO_HOSTS)
-        ):
-            title = clean_text(entry.get("title")) or "NASA Astronomy Picture of the Day"
-            return {
-                "url": image, "link": link, "source": "NASA APOD", "credit": credit,
-                "date": day.isoformat(), "title": title,
-                "alt": (clean_text(entry.get("alt")) or title, f"Фото NASA APOD — {title}"),
-            }
-    return None
-
-
-def epic_photos(day, previous_url):
-    entries = get_json(f"{EPIC}/api/natural")
-    candidates = []
-    for entry in sorted(entries, key=lambda item: item["date"], reverse=True):
-        captured = datetime.fromisoformat(entry["date"]).date()
-        image = entry["image"]
-        if captured > day or not re.fullmatch(r"epic_1b_\d{14}", image):
-            continue
-        url = f"{EPIC}/archive/natural/{captured:%Y/%m/%d}/jpg/{image}.jpg"
-        if url != previous_url:
-            candidates.append((captured, url))
-    if not candidates:
-        raise RuntimeError("NASA EPIC has no new eligible Earth photo")
-
-    # Spread selections across available views when the archive lags for several days.
-    index = (day - date.min).days % len(candidates)
-    for captured, url in (candidates[index:] + candidates[:index])[:3]:
-        yield {
-            "url": url, "link": f"{EPIC}/?date={captured.isoformat()}",
-            "source": "NASA EPIC", "credit": "NASA EPIC Team",
-            "date": captured.isoformat(), "title": "Earth from DSCOVR",
-            "alt": ("Earth seen from DSCOVR", "Земля со спутника DSCOVR"),
-        }
+    entries = get_json(f"{APOD}/wp-json/wp/v2/apod-basic?per_page=14&_fields={fields}")
+    day = day.isoformat()
+    today = next((entry for entry in entries if entry["date"] == day), None)
+    if today is None:
+        raise RuntimeError(f"NASA APOD has not published {day} yet")
+    if today["media_type"] == "image":
+        return [today]
+    return sorted(
+        (entry for entry in entries if entry["date"] < day and entry["media_type"] == "image"),
+        key=lambda entry: entry["date"],
+        reverse=True,
+    )[:5]
 
 
 def prepare_image(url):
     raw = request_bytes(url, limit=IMAGE_LIMIT, redirect_hosts=PHOTO_HOSTS)
     with Image.open(BytesIO(raw)) as source:
-        if source.format not in {"JPEG", "PNG", "WEBP"}:
+        if source.format not in {"JPEG", "PNG", "GIF", "WEBP"}:
             raise ValueError("Unsupported NASA image format")
         if source.width * source.height > 30_000_000:
             raise ValueError("NASA image is too large")
@@ -91,29 +56,31 @@ def prepare_image(url):
 
 
 def select_photo(day, previous):
-    previous_url = previous.get("url")
-    previous_file = previous.get("file")
-    try:
-        candidate = apod_photo(day)
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        print(f"NASA APOD feed unavailable ({type(error).__name__})", flush=True)
-        candidate = None
-
-    def prepare(photo):
-        if photo["url"] == previous_url:
-            return None
+    entries = apod_entries(day)
+    for entry in entries:
+        url = entry.get("hdurl")
+        link = entry.get("permalink")
+        if not nasa_url(url, PHOTO_HOSTS) or not nasa_url(link, ARTICLE_HOSTS):
+            continue
+        if entry["date"] != day.isoformat() and url == previous.get("url"):
+            continue
         try:
-            data, (width, height) = prepare_image(photo["url"])
+            data, (width, height) = prepare_image(url)
         except (OSError, ValueError, Image.DecompressionBombError):
-            return None
+            continue
         filename = f"{sha256(data).hexdigest()}.jpg"
-        if filename == previous_file:
-            return None
-        return {**photo, "file": filename, "width": width, "height": height}, data
+        if entry["date"] != day.isoformat() and filename == previous.get("file"):
+            continue
 
-    if candidate and (result := prepare(candidate)):
-        return result
-    for photo in epic_photos(day, previous_url):
-        if result := prepare(photo):
-            return result
-    raise RuntimeError("No new NASA image could be downloaded and decoded")
+        title = clean_text(entry.get("title")) or "NASA Astronomy Picture of the Day"
+        credit = clean_text(entry.get("credit"))
+        copyright_notice = clean_text(entry.get("copyright"))
+        attribution = " · ".join(dict.fromkeys(filter(None, (credit, copyright_notice))))
+        return {
+            "url": url, "link": link, "source": "NASA APOD", "credit": attribution,
+            "date": entry["date"], "title": title, "file": filename,
+            "alt": (clean_text(entry.get("alt")) or title, f"Фото NASA APOD — {title}"),
+            "width": width, "height": height,
+        }, data
+
+    raise RuntimeError(f"No usable NASA APOD image is available for {day}")

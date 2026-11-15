@@ -218,7 +218,7 @@
            width="{{ photo.width }}" height="{{ photo.height }}">
       <figcaption>
         <a href="{{ photo.link }}">{{ photo.source }} · {{ photo.title }}</a>
-        · {{ photo.credit }} · <time datetime="{{ photo.date }}" data-ru="{{ photo_date[1] }}">{{ photo_date[0] }}</time>
+        {% if photo.credit %}· {{ photo.credit }} {% endif %}· <time datetime="{{ photo.date }}" data-ru="{{ photo_date[1] }}">{{ photo_date[0] }}</time>
       </figcaption>
     </figure>
     <footer class="byline">
