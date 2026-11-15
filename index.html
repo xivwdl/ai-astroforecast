@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ai forecast</title>
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAB20lEQVR42u2aPUgDQRBGF0GxCmgldoJYWFqJpRAQFASrNBbWVgfaCoKVJsHC0jpViigKFrZiYZPOShQsBG0EC0EQfbAgIblcLrkT8g0LX7F3t+zOS/ZnZnbdz8KdtFwACAABIAB01+PqORIGaJZqSBigEVWQMEC5GiFhgM2LNSQMMP8wi1QBnlcuR75HEQVJgNP9PQ9AQRKgeLvkASjoAbwUr8a+xj0ABR7FAA5Otr31XjwqAXwu3ky/TrUC8MhLGYDjo51W6714qQHwtnw9+T7RCcBLPgkAbJ2td1rvxadhB6jvHnaz3osKwwtwv1EvfBSSAahAtWEEYKWfe5pJtt6LajluCy4v63Ha0ljvReW8GFwuIyflb9/2P+Qyllz2Wdtz3CfMh+xz2mVZ7xNWzPSikSz7gxvMU2Bbjd2tBhNN0eBgvobrd7LilrX5OXmJZmm838ntUsZWBCW49X8e8v+JLuiI7lLGcS42G9Us1RpRpVyNCMn7Wh/zFV1jAGZgDCbF5sgsAsgPIYOT2M4yamQjM+JKGHHmLLjTFgIaCyGlhaDeQlrFQmJLPrVoIbkrn163cMAhf8Rk4ZBP/phV/qDbwlUD+cse8tdt5C88yV85C7cWA0AACAC99AuYtm84FapyQwAAAABJRU5ErkJggg==">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #fcfcfc;
+      --ink: #151515;
+      --pink: #ff32cb;
+      --green: #02fd05;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "IBM Plex Mono", "Courier New", monospace;
+      font-size: clamp(.9375rem, .9rem + .2vw, 1.0625rem);
+      line-height: 1.48;
+    }
+
+    body { margin: 0; }
+
+    main {
+      box-sizing: border-box;
+      max-inline-size: 60rem;
+      margin-inline: auto;
+      padding: 1.5rem clamp(1rem, 3.5vw, 2.5rem) 0;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .forecast-date {
+      font-size: 1.08rem;
+      font-weight: 500;
+    }
+
+    .languages {
+      display: flex;
+      gap: .35rem;
+    }
+
+    .languages button {
+      border: 1px solid currentColor;
+      border-radius: .25rem;
+      padding: .15rem .45rem;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      font-size: .75rem;
+      cursor: pointer;
+    }
+
+    .languages button[aria-pressed="true"] {
+      border-color: var(--ink);
+      background: var(--green);
+    }
+
+    .forecast { margin-block-start: 1.6rem; }
+
+    .forecast p {
+      position: relative;
+      isolation: isolate;
+      margin: 0;
+      padding-block-end: .62rem;
+      overflow-wrap: anywhere;
+    }
+
+    .forecast p + p { margin-block-start: .8rem; }
+
+    .forecast p::before,
+    .conditions::before {
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+      background: repeating-linear-gradient(180deg, var(--bar) 0 1px, transparent 1px 3px);
+    }
+
+    .forecast p::before {
+      --bar: var(--pink);
+      clip-path: polygon(0 0, 94% 0, 94% 23%, 100% 23%, 100% 45%, 96% 45%, 96% 70%,
+        86% 70%, 86% 86%, 97% 86%, 97% 100%, 0 100%);
+    }
+
+    .forecast p:nth-child(2)::before {
+      --bar: var(--green);
+      clip-path: polygon(0 0, 100% 0, 100% 28%, 92% 28%, 92% 59%, 98% 59%, 98% 82%,
+        78% 82%, 78% 100%, 0 100%);
+    }
+
+    .forecast p:nth-child(3)::before {
+      clip-path: polygon(0 0, 96% 0, 96% 38%, 100% 38%, 100% 74%, 78% 74%, 78% 100%, 0 100%);
+    }
+
+    .forecast p > span {
+      padding: .05em .4em .09em 0;
+      background: var(--paper);
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+    }
+
+    .forecast strong {
+      font-weight: 600;
+    }
+
+    .conditions {
+      position: relative;
+      isolation: isolate;
+      display: grid;
+      gap: .22rem;
+      margin: 1.5rem 0;
+      padding-block: .35rem .5rem;
+    }
+
+    .conditions::before {
+      --bar: var(--green);
+      clip-path: polygon(0 0, 62% 0, 62% 24%, 73% 24%, 73% 48%, 89% 48%, 89% 74%,
+        100% 74%, 100% 100%, 0 100%);
+    }
+
+    .conditions div {
+      display: grid;
+      grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+      justify-content: start;
+      column-gap: .55rem;
+      inline-size: fit-content;
+      max-inline-size: 100%;
+      padding-inline-end: .5em;
+      background: var(--paper);
+    }
+
+    .conditions dt {
+      font-weight: 600;
+    }
+
+    .conditions dd { margin: 0; }
+
+    .photo-status { margin: 1rem 0; }
+
+    .earth { margin: 0; }
+
+    .earth img {
+      display: block;
+      inline-size: 100%;
+      block-size: auto;
+      filter: grayscale(1);
+    }
+
+    .byline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: .35rem 1rem;
+      margin: .7rem 0 1rem;
+      font-size: .75rem;
+    }
+
+    .byline a { color: inherit; }
+    .byline > a { margin-inline-start: auto; }
+    .byline > a:is(:hover, :focus-visible) { background: var(--pink); }
+
+    @media (max-width: 29rem) {
+      .conditions div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="page-header">
+      <time class="forecast-date" datetime="2026-11-07" data-en="7 November 2026">7 ноября 2026</time>
+      <div class="languages" role="group" aria-label="Язык" data-en-label="Language">
+        <button type="button" lang="en" aria-label="English" aria-pressed="false" data-language="en">EN</button>
+        <button type="button" lang="ru" aria-label="Русский" aria-pressed="true" data-language="ru">RU</button>
+      </div>
+    </header>
+
+    <article class="forecast" aria-label="Прогноз на 7 ноября 2026" data-en-label="Forecast for 7 November 2026">
+      <p><span><strong data-en="Day at a glance.">Обзор дня.</strong> <span data-en="Three planets are retrograde today: Mercury, Venus, and Saturn. In astrological terms, that puts pressure on communication and relationships, drawing attention back to old agreements and past decisions. The lunar phase brings no dramatic change, but it adds to the reflective mood. Consider reviewing work you have already done and putting off new projects, formal agreements, and impulse purchases.">Этот день характеризуется мощным фоном ретроградности, который охватывает сразу три планеты — Меркурий, Венеру и Сатурн. Это создает сильное давление на коммуникацию и социальные связи, заставляя нас возвращаться к старым договоренностям и переосмысливать прошлые решения. Фаза Луны не несет драматических изменений, но усугубляет атмосферу внутренней рефлексии, делая момент не лучшим для старта новых проектов. Лучше отложить любые официальные соглашения и спонтанные покупки, сфокусировавшись на анализе того, что уже сделано.</span></span></p>
+      <p><span><strong data-en="Moon sign.">Луна в знаке.</strong> <span data-en="The Moon is in Libra, bringing an emphasis on aesthetics and a desire for harmony. The mood is gentle and favors compromise, but with Saturn retrograde, the desire to agree may turn into passivity or excessive accommodation. Trying to balance two points of view and keep the peace at all costs can become exhausting.">Луна находится в Весах, что придает дню выраженную эстетическую направленность и потребность в гармонии. Эмоциональный фон окрашен мягкостью и стремлением к компромиссам, однако под влиянием ретроградного Сатурна эта тяга к согласию может превратиться в пассивность или чрезмерную уступчивость. Человек сегодня склонен балансировать между двумя точками зрения, пытаясь сохранить мир любой ценой, что иногда приводит к внутренней усталости.</span></span></p>
+      <p><span><strong data-en="Tip for the day.">Совет дня.</strong> <span data-en="Focus on improving the relationships and projects you already have. Read contracts and financial documents carefully before signing, since the forecast points to a greater chance of mistakes today.">Сосредоточьтесь на качественном улучшении уже существующих отношений и объектов, вместо того чтобы пытаться изменить их. Тщательно проверьте договоры и финансовые документы до их подписания, так как риск ошибки сегодня высок.</span></span></p>
+    </article>
+
+    <section aria-label="Показатели прогноза" data-en-label="Forecast factors">
+      <dl class="conditions">
+        <div>
+          <dt data-en="Moon sign">Луна в знаке</dt>
+          <dd data-en="Libra">Весы</dd>
+        </div>
+        <div>
+          <dt data-en="Moon phase">Фаза Луны</dt>
+          <dd data-en="Waning Moon">Убывающая Луна</dd>
+        </div>
+        <div>
+          <dt data-en="Eclipses">Затмения</dt>
+          <dd data-en="No solar or lunar eclipses">Солнечных и лунных нет</dd>
+        </div>
+        <div>
+          <dt data-en="Retrograde planets">Ретроградные планеты</dt>
+          <dd data-en="Mercury, Venus, Saturn">Меркурий, Венера, Сатурн</dd>
+        </div>
+      </dl>
+    </section>
+
+    <p class="photo-status" role="status">Загрузка фото NASA APOD…</p>
+    <figure class="earth" hidden>
+      <img alt="">
+    </figure>
+    <footer class="byline">
+      <span><a href="https://www.astro.com/swisseph/swephinfo_e.htm">Swiss Ephemeris</a> | <a href="https://huggingface.co/zai-org/GLM-4.7-Flash">GLM-4.7-Flash</a> | <a class="apod-link" href="https://science.nasa.gov/apod/">NASA APOD</a></span>
+      <a href="https://d1ma.xyz/">made by d1ma.xyz</a>
+    </footer>
+  </main>
+  <script>
+    const buttons = document.querySelectorAll('[data-language]');
+    const translations = [...document.querySelectorAll('[data-en], [data-en-label]')].map(element => {
+      const attribute = element.hasAttribute('data-en-label') ? 'aria-label' : null;
+      return {
+        element,
+        attribute,
+        ru: attribute ? element.getAttribute(attribute) : element.textContent,
+        en: attribute ? element.dataset.enLabel : element.dataset.en
+      };
+    });
+
+    const photoFrame = document.querySelector('.earth');
+    const photoStatus = document.querySelector('.photo-status');
+    let picture = photoFrame.querySelector('img');
+    const creditLink = document.querySelector('.apod-link');
+    const languageKey = 'ai-astro-language';
+    const feed = 'https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=14&_fields=date,media_type,hdurl,title,alt,permalink,credit,copyright';
+    let language = 'en';
+    let currentPhoto;
+    let photoUnavailable = false;
+
+    function updatePhotoLabels() {
+      if (!currentPhoto) {
+        const messages = language === 'en'
+          ? ['Loading NASA APOD…', 'NASA APOD is temporarily unavailable.']
+          : ['Загрузка фото NASA APOD…', 'Фото NASA APOD временно недоступно.'];
+        photoStatus.textContent = messages[Number(photoUnavailable)];
+        return;
+      }
+
+      const label = language === 'en' ? 'NASA Astronomy Picture of the Day' : 'Фото дня NASA';
+      picture.alt = language === 'en' && currentPhoto.alt
+        ? currentPhoto.alt
+        : [label, currentPhoto.title].filter(Boolean).join(' · ');
+      creditLink.title = ['NASA APOD', currentPhoto.date, currentPhoto.credit].filter(Boolean).join(' · ');
+      creditLink.setAttribute('aria-label', creditLink.title);
+    }
+
+    function setLanguage(value) {
+      language = value;
+      document.documentElement.lang = value;
+      for (const translation of translations) {
+        const { element, attribute } = translation;
+        if (attribute) element.setAttribute(attribute, translation[value]);
+        else element.textContent = translation[value];
+      }
+      for (const button of buttons) {
+        button.setAttribute('aria-pressed', String(button.dataset.language === value));
+      }
+      updatePhotoLabels();
+    }
+
+    let savedLanguage;
+    try {
+      savedLanguage = localStorage.getItem(languageKey);
+    } catch {
+      // The language switch still works when storage is disabled.
+    }
+    setLanguage(savedLanguage === 'ru' ? 'ru' : 'en');
+
+    for (const button of buttons) {
+      button.addEventListener('click', () => {
+        setLanguage(button.dataset.language);
+        try {
+          localStorage.setItem(languageKey, language);
+        } catch {
+          // Keep the selection for this visit.
+        }
+      });
+    }
+
+    async function loadDailyPhoto() {
+      const response = await fetch(feed, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`NASA APOD: HTTP ${response.status}`);
+
+      const entries = await response.json();
+      const entry = entries.find(item => item.media_type === 'image' && item.hdurl?.startsWith('https://'));
+      if (!entry) throw new Error('NASA APOD: no image in feed');
+      if (entry.date === currentPhoto?.date) return;
+
+      const candidate = new Image();
+      candidate.src = entry.hdurl;
+      await candidate.decode();
+
+      const credit = document.createElement('template');
+      credit.innerHTML = entry.credit || entry.copyright || '';
+      currentPhoto = { ...entry, credit: credit.content.textContent.trim() };
+      picture.replaceWith(candidate);
+      picture = candidate;
+      creditLink.href = entry.permalink?.startsWith('https://')
+        ? entry.permalink
+        : 'https://science.nasa.gov/apod/';
+      updatePhotoLabels();
+      photoStatus.hidden = true;
+      photoFrame.hidden = false;
+    }
+
+    function refreshPhoto() {
+      const now = new Date();
+      const next = new Date(now);
+      // Check after the APOD release in either Eastern time offset.
+      next.setUTCHours(5, 15, 0, 0);
+      if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+      setTimeout(refreshPhoto, next - now);
+      loadDailyPhoto().catch(error => {
+        photoUnavailable = true;
+        updatePhotoLabels();
+        console.warn(error);
+      });
+    }
+
+    refreshPhoto();
+  </script>
+</body>
+</html>
