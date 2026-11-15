@@ -163,7 +163,8 @@
 
     .byline a { color: inherit; }
     .byline > a { margin-inline-start: auto; }
-    .byline a:is(:hover, :focus-visible) { background: var(--pink); }
+    .byline > a:is(:hover, :focus-visible) { background: var(--pink); }
+    .byline span a:focus-visible { outline: none; }
 
     @media (max-width: 29rem) {
       .conditions div {
@@ -218,8 +219,8 @@
     <footer class="byline">
       <span><a href="https://www.astro.com/swisseph/swephinfo_e.htm">Swiss Ephemeris</a>
         | <a href="https://docs.z.ai/">{{ edition.model }}</a>
-        | <a href="{{ source }}">GitHub</a>
-        | <a href="{{ photo.link }}">NASA APOD</a></span>
+        | <a href="{{ photo.link }}">NASA APOD</a>
+        | <a href="{{ source }}">GitHub</a></span>
       <a href="https://d1ma.xyz/">made by d1ma.xyz</a>
     </footer>
   </main>
