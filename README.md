@@ -4,7 +4,7 @@ A daily astrology forecast based on astronomical calculations and written by AI.
 
 ## Coolify
 
-1. Connect this repository as a **Dockerfile** app. Expose port **8000** and use **/health** for the health check.
+1. Connect this repository as a **Dockerfile** app. Expose port **8000**. Leave the Coolify dashboard health check disabled to use the Dockerfile's built-in **/health** check.
 2. Add a volume at **/data**. Use a Docker volume. A bind mount must be writable by UID 10001.
 3. Add **ZAI_API_KEY** as a runtime-only secret. Optionally set **ZAI_MODEL** (default `glm-4.7-flash`). Keep Coolify's built-in **SOURCE_COMMIT** enabled for the deployed source link.
 4. Deploy, then add a scheduled task with command `python publish.py`, frequency `*/15 * * * *`, and timeout **300 seconds**. Use **Execute now** once. Connect your public domain after the first successful edition. An empty volume serves HTTP 503 until then.
