@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from urllib.error import HTTPError
+from urllib.parse import urlsplit
 
 from astronomy import calculate, publication_date
 from photos import select_photo
@@ -139,10 +140,28 @@ def publish(now=None):
         print(f"Published {day} with {photo['source']}")
 
 
+def describe_http_error(error):
+    host = urlsplit(error.url).hostname
+    service = {"api.z.ai": "Z.ai", "science.nasa.gov": "NASA APOD"}.get(host, "Upstream")
+    message = f"{service} returned HTTP {error.code}"
+    if service == "Z.ai":
+        try:
+            payload = json.loads(error.read(8192))
+            code = payload["error"]["code"]
+            if isinstance(code, (str, int)) and str(code).isascii() and str(code).isdigit() and len(str(code)) <= 8:
+                message += f" (Z.ai code {code})"
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+    retry_after = error.headers.get("Retry-After") if error.headers else None
+    if retry_after and retry_after.isascii() and retry_after.isdigit() and len(retry_after) <= 8:
+        message += f", retry after {retry_after} seconds"
+    return message
+
+
 if __name__ == "__main__":
     try:
         publish()
     except HTTPError as error:
-        raise SystemExit(f"Publication failed: upstream returned HTTP {error.code}") from None
+        raise SystemExit(f"Publication failed: {describe_http_error(error)}") from None
     except (OSError, ValueError, KeyError, IndexError, TypeError, RuntimeError) as error:
         raise SystemExit(f"Publication failed: {error}") from None
