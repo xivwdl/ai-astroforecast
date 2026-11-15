@@ -1,6 +1,6 @@
 # AI Astroforecast
 
-A bilingual daily astrology forecast based on astronomical calculations and written by AI.
+A daily astrology forecast based on astronomical calculations and written by AI.
 
 The current version is an HTML prototype. Forecast generation and Coolify deployment are planned.
 
