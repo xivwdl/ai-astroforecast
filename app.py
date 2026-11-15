@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import date, datetime
+from datetime import date
 
 from flask import Flask, make_response, render_template, send_from_directory
 
@@ -27,11 +27,7 @@ def format_moon_sign(facts):
     transition = facts.get("moon_transition")
     if transition is None:
         return facts["moon_sign"]
-    time = datetime.fromisoformat(transition["at"]).strftime("%H:%M")
-    return [
-        f"{transition['from'][i]} → {transition['to'][i]} ({time} {zone})"
-        for i, zone in enumerate(("MSK", "МСК"))
-    ]
+    return [f"{start} → {end}" for start, end in zip(transition["from"], transition["to"])]
 
 
 def format_list(items, empty):
