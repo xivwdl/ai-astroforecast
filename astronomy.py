@@ -5,6 +5,11 @@ import swisseph as swe
 
 MOSCOW = ZoneInfo("Europe/Moscow")
 NEW_YORK = ZoneInfo("America/New_York")
+WEEKDAYS = (
+    ("Monday", "понедельник"), ("Tuesday", "вторник"), ("Wednesday", "среда"),
+    ("Thursday", "четверг"), ("Friday", "пятница"), ("Saturday", "суббота"),
+    ("Sunday", "воскресенье"),
+)
 
 SIGNS = (
     ("Aries", "Овен"), ("Taurus", "Телец"), ("Gemini", "Близнецы"),
@@ -59,6 +64,17 @@ def calculate(day, ephemeris_path):
     reference = datetime.combine(day, time(12), MOSCOW)
     start_jd, end_jd, reference_jd = map(julian_day, (start, end, reference))
 
+    start_sign = int((position(start_jd, swe.MOON)[0] % 360) // 30)
+    next_sign = (start_sign + 1) % len(SIGNS)
+    crossing_jd = swe.mooncross_ut(next_sign * 30, start_jd, swe.FLG_SWIEPH)
+    moon_transition = None
+    if start_jd <= crossing_jd < end_jd:
+        crossing = start.astimezone(UTC) + timedelta(days=crossing_jd - start_jd)
+        moon_transition = {
+            "from": SIGNS[start_sign], "to": SIGNS[next_sign],
+            "at": crossing.astimezone(MOSCOW).isoformat(timespec="seconds"),
+        }
+
     moon = position(reference_jd, swe.MOON)[0] % 360
     sun = position(reference_jd, swe.SUN)[0]
     retrograde = [
@@ -75,7 +91,9 @@ def calculate(day, ephemeris_path):
 
     return {
         "reference": reference.isoformat(),
+        "weekday": WEEKDAYS[day.weekday()],
         "moon_sign": SIGNS[int(moon // 30)],
+        "moon_transition": moon_transition,
         "moon_phase": PHASES[lunar_phase((moon - sun) % 360)],
         "eclipses": eclipses,
         "retrograde": retrograde,

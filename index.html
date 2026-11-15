@@ -176,7 +176,7 @@
 </head>
 <body>
   {% macro text(en, ru) -%}<span data-ru="{{ ru }}">{{ en }}</span>{%- endmacro %}
-  <main data-edition="{{ edition.date }}">
+  <main data-edition="{{ edition.date }}" data-revision="{{ edition.get('published_at', '') }}">
     <header class="page-header">
       <time class="forecast-date" datetime="{{ edition.date }}" data-ru="{{ labels[1] }}">{{ labels[0] }}</time>
       <div class="languages" role="group" aria-label="Language" data-ru-label="Язык">
@@ -198,7 +198,7 @@
     <section aria-label="Forecast factors" data-ru-label="Показатели прогноза">
       <dl class="conditions">
         {% for en, ru, values in (
-          ("Moon sign", "Луна в знаке", edition.facts.moon_sign),
+          ("Moon sign", "Луна в знаке", moon_sign),
           ("Moon phase", "Фаза Луны", edition.facts.moon_phase),
           ("Eclipses", "Затмения", eclipses),
           ("Retrograde planets", "Ретроградные планеты", retrograde)
@@ -265,6 +265,10 @@
 
     let refreshing = false;
 
+    function isNewerEdition(current, date, revision) {
+      return date > current.edition || (date === current.edition && revision > current.revision);
+    }
+
     async function refreshEdition() {
       if (refreshing || document.hidden) return;
       refreshing = true;
@@ -273,12 +277,13 @@
         const status = await fetch('/edition', { signal: AbortSignal.timeout(10000) });
         if (!status.ok) return;
         const date = await status.text();
-        if (date <= current.dataset.edition) return;
+        const revision = status.headers.get('X-Edition-Revision') || '';
+        if (!isNewerEdition(current.dataset, date, revision)) return;
 
         const response = await fetch('/', { signal: AbortSignal.timeout(10000) });
         if (!response.ok) return;
         const next = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('main');
-        if (!next || next.dataset.edition <= current.dataset.edition) return;
+        if (!next || !isNewerEdition(current.dataset, next.dataset.edition, next.dataset.revision)) return;
 
         const photo = next.querySelector('.earth img');
         const readyPhoto = new Image(photo.width, photo.height);
