@@ -1,0 +1,6 @@
+*
+!*.py
+!index.html
+!requirements.txt
+!ephemerides.sha256
+!LICENSE

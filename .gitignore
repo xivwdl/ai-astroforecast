@@ -2,3 +2,7 @@
 .env.*
 !.env.example
 .DS_Store
+.venv/
+__pycache__/
+data/
+ephe/

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -143,8 +143,6 @@
 
     .conditions dd { margin: 0; }
 
-    .photo-status { margin: 1rem 0; }
-
     .earth { margin: 0; }
 
     .earth img {
@@ -163,7 +161,9 @@
       font-size: .75rem;
     }
 
-    .byline a { color: inherit; }
+    .earth figcaption { margin-block-start: .45rem; font-size: .75rem; }
+
+    .earth a, .byline a { color: inherit; }
     .byline > a { margin-inline-start: auto; }
     .byline > a:is(:hover, :focus-visible) { background: var(--pink); }
 
@@ -176,164 +176,136 @@
   </style>
 </head>
 <body>
-  <main>
+  {% macro text(en, ru) -%}<span data-ru="{{ ru }}">{{ en }}</span>{%- endmacro %}
+  <main data-edition="{{ edition.date }}">
     <header class="page-header">
-      <time class="forecast-date" datetime="2026-11-07" data-en="7 November 2026">7 ноября 2026</time>
-      <div class="languages" role="group" aria-label="Язык" data-en-label="Language">
-        <button type="button" lang="en" aria-label="English" aria-pressed="false" data-language="en">EN</button>
-        <button type="button" lang="ru" aria-label="Русский" aria-pressed="true" data-language="ru">RU</button>
+      <time class="forecast-date" datetime="{{ edition.date }}" data-ru="{{ labels[1] }}">{{ labels[0] }}</time>
+      <div class="languages" role="group" aria-label="Language" data-ru-label="Язык">
+        <button type="button" lang="en" aria-label="English" aria-pressed="true" data-language="en">EN</button>
+        <button type="button" lang="ru" aria-label="Русский" aria-pressed="false" data-language="ru">RU</button>
       </div>
     </header>
 
-    <article class="forecast" aria-label="Прогноз на 7 ноября 2026" data-en-label="Forecast for 7 November 2026">
-      <p><span><strong data-en="Day at a glance.">Обзор дня.</strong> <span data-en="Three planets are retrograde today: Mercury, Venus, and Saturn. In astrological terms, that puts pressure on communication and relationships, drawing attention back to old agreements and past decisions. The lunar phase brings no dramatic change, but it adds to the reflective mood. Consider reviewing work you have already done and putting off new projects, formal agreements, and impulse purchases.">Этот день характеризуется мощным фоном ретроградности, который охватывает сразу три планеты — Меркурий, Венеру и Сатурн. Это создает сильное давление на коммуникацию и социальные связи, заставляя нас возвращаться к старым договоренностям и переосмысливать прошлые решения. Фаза Луны не несет драматических изменений, но усугубляет атмосферу внутренней рефлексии, делая момент не лучшим для старта новых проектов. Лучше отложить любые официальные соглашения и спонтанные покупки, сфокусировавшись на анализе того, что уже сделано.</span></span></p>
-      <p><span><strong data-en="Moon sign.">Луна в знаке.</strong> <span data-en="The Moon is in Libra, bringing an emphasis on aesthetics and a desire for harmony. The mood is gentle and favors compromise, but with Saturn retrograde, the desire to agree may turn into passivity or excessive accommodation. Trying to balance two points of view and keep the peace at all costs can become exhausting.">Луна находится в Весах, что придает дню выраженную эстетическую направленность и потребность в гармонии. Эмоциональный фон окрашен мягкостью и стремлением к компромиссам, однако под влиянием ретроградного Сатурна эта тяга к согласию может превратиться в пассивность или чрезмерную уступчивость. Человек сегодня склонен балансировать между двумя точками зрения, пытаясь сохранить мир любой ценой, что иногда приводит к внутренней усталости.</span></span></p>
-      <p><span><strong data-en="Tip for the day.">Совет дня.</strong> <span data-en="Focus on improving the relationships and projects you already have. Read contracts and financial documents carefully before signing, since the forecast points to a greater chance of mistakes today.">Сосредоточьтесь на качественном улучшении уже существующих отношений и объектов, вместо того чтобы пытаться изменить их. Тщательно проверьте договоры и финансовые документы до их подписания, так как риск ошибки сегодня высок.</span></span></p>
+    <article class="forecast" aria-label="Forecast for {{ labels[0] }}" data-ru-label="Прогноз на {{ labels[1] }}">
+      {% for key, en, ru in (
+        ("overview", "Day at a glance.", "Обзор дня."),
+        ("moon", "Moon sign.", "Луна в знаке."),
+        ("advice", "Tip for the day.", "Совет дня.")
+      ) %}
+      <p><span><strong data-ru="{{ ru }}">{{ en }}</strong> {{ text(edition.forecast.en[key], edition.forecast.ru[key]) }}</span></p>
+      {% endfor %}
     </article>
 
-    <section aria-label="Показатели прогноза" data-en-label="Forecast factors">
+    <section aria-label="Forecast factors" data-ru-label="Показатели прогноза">
       <dl class="conditions">
+        {% for en, ru, values in (
+          ("Moon sign", "Луна в знаке", edition.facts.moon_sign),
+          ("Moon phase", "Фаза Луны", edition.facts.moon_phase),
+          ("Eclipses", "Затмения", eclipses),
+          ("Retrograde planets", "Ретроградные планеты", retrograde)
+        ) %}
         <div>
-          <dt data-en="Moon sign">Луна в знаке</dt>
-          <dd data-en="Libra">Весы</dd>
+          <dt data-ru="{{ ru }}">{{ en }}</dt>
+          <dd data-ru="{{ values[1] }}">{{ values[0] }}</dd>
         </div>
-        <div>
-          <dt data-en="Moon phase">Фаза Луны</dt>
-          <dd data-en="Waning Moon">Убывающая Луна</dd>
-        </div>
-        <div>
-          <dt data-en="Eclipses">Затмения</dt>
-          <dd data-en="No solar or lunar eclipses">Солнечных и лунных нет</dd>
-        </div>
-        <div>
-          <dt data-en="Retrograde planets">Ретроградные планеты</dt>
-          <dd data-en="Mercury, Venus, Saturn">Меркурий, Венера, Сатурн</dd>
-        </div>
+        {% endfor %}
       </dl>
     </section>
 
-    <p class="photo-status" role="status">Загрузка фото NASA APOD…</p>
-    <figure class="earth" hidden>
-      <img alt="">
+    {% set photo = edition.photo %}
+    <figure class="earth">
+      <img src="{{ url_for('photo', filename=photo.file) }}" alt="{{ photo.alt[0] }}" data-ru-alt="{{ photo.alt[1] }}"
+           width="{{ photo.width }}" height="{{ photo.height }}">
+      <figcaption>
+        <a href="{{ photo.link }}">{{ photo.source }} · {{ photo.title }}</a>
+        · {{ photo.credit }} · <time datetime="{{ photo.date }}" data-ru="{{ photo_date[1] }}">{{ photo_date[0] }}</time>
+      </figcaption>
     </figure>
     <footer class="byline">
-      <span><a href="https://www.astro.com/swisseph/swephinfo_e.htm">Swiss Ephemeris</a> | <a href="https://huggingface.co/zai-org/GLM-4.7-Flash">GLM-4.7-Flash</a> | <a class="apod-link" href="https://science.nasa.gov/apod/">NASA APOD</a></span>
+      <span><a href="https://www.astro.com/swisseph/swephinfo_e.htm">Swiss Ephemeris</a>
+        | <a href="https://docs.z.ai/">{{ edition.model }}</a>
+        | <a href="{{ source }}" data-ru="Исходный код">Source code</a></span>
       <a href="https://d1ma.xyz/">made by d1ma.xyz</a>
     </footer>
   </main>
   <script>
-    const buttons = document.querySelectorAll('[data-language]');
-    const translations = [...document.querySelectorAll('[data-en], [data-en-label]')].map(element => {
-      const attribute = element.hasAttribute('data-en-label') ? 'aria-label' : null;
-      return {
-        element,
-        attribute,
-        ru: attribute ? element.getAttribute(attribute) : element.textContent,
-        en: attribute ? element.dataset.enLabel : element.dataset.en
-      };
+    const languageKey = 'ai-astro-language';
+    let language = 'en';
+    try {
+      if (localStorage.getItem(languageKey) === 'ru') language = 'ru';
+    } catch {}
+
+    const english = new WeakMap();
+
+    function setLanguage(root) {
+      document.documentElement.lang = language;
+      for (const element of root.querySelectorAll('[data-ru], [data-ru-label], [data-ru-alt]')) {
+        const attribute = element.hasAttribute('data-ru-label') ? 'aria-label'
+          : element.hasAttribute('data-ru-alt') ? 'alt' : null;
+        if (!english.has(element)) {
+          english.set(element, attribute ? element.getAttribute(attribute) : element.textContent);
+        }
+        const ru = attribute === 'aria-label' ? element.dataset.ruLabel
+          : attribute === 'alt' ? element.dataset.ruAlt : element.dataset.ru;
+        const translation = language === 'ru' ? ru : english.get(element);
+        if (attribute) element.setAttribute(attribute, translation);
+        else element.textContent = translation;
+      }
+      for (const button of root.querySelectorAll('[data-language]')) {
+        button.setAttribute('aria-pressed', String(button.dataset.language === language));
+      }
+    }
+
+    setLanguage(document.querySelector('main'));
+    document.addEventListener('click', event => {
+      const button = event.target.closest('button[data-language]');
+      if (!button) return;
+      language = button.dataset.language;
+      setLanguage(document.querySelector('main'));
+      try {
+        localStorage.setItem(languageKey, language);
+      } catch {}
     });
 
-    const photoFrame = document.querySelector('.earth');
-    const photoStatus = document.querySelector('.photo-status');
-    let picture = photoFrame.querySelector('img');
-    const creditLink = document.querySelector('.apod-link');
-    const languageKey = 'ai-astro-language';
-    const feed = 'https://science.nasa.gov/wp-json/wp/v2/apod-basic?per_page=14&_fields=date,media_type,hdurl,title,alt,permalink,credit,copyright';
-    let language = 'en';
-    let currentPhoto;
-    let photoUnavailable = false;
+    let refreshing = false;
 
-    function updatePhotoLabels() {
-      if (!currentPhoto) {
-        const messages = language === 'en'
-          ? ['Loading NASA APOD…', 'NASA APOD is temporarily unavailable.']
-          : ['Загрузка фото NASA APOD…', 'Фото NASA APOD временно недоступно.'];
-        photoStatus.textContent = messages[Number(photoUnavailable)];
-        return;
-      }
+    async function refreshEdition() {
+      if (refreshing || document.hidden) return;
+      refreshing = true;
+      try {
+        const current = document.querySelector('main');
+        const status = await fetch('/edition', { signal: AbortSignal.timeout(10000) });
+        if (!status.ok) return;
+        const date = await status.text();
+        if (date <= current.dataset.edition) return;
 
-      const label = language === 'en' ? 'NASA Astronomy Picture of the Day' : 'Фото дня NASA';
-      picture.alt = language === 'en' && currentPhoto.alt
-        ? currentPhoto.alt
-        : [label, currentPhoto.title].filter(Boolean).join(' · ');
-      creditLink.title = ['NASA APOD', currentPhoto.date, currentPhoto.credit].filter(Boolean).join(' · ');
-      creditLink.setAttribute('aria-label', creditLink.title);
-    }
+        const response = await fetch('/', { signal: AbortSignal.timeout(10000) });
+        if (!response.ok) return;
+        const next = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('main');
+        if (!next || next.dataset.edition <= current.dataset.edition) return;
 
-    function setLanguage(value) {
-      language = value;
-      document.documentElement.lang = value;
-      for (const translation of translations) {
-        const { element, attribute } = translation;
-        if (attribute) element.setAttribute(attribute, translation[value]);
-        else element.textContent = translation[value];
-      }
-      for (const button of buttons) {
-        button.setAttribute('aria-pressed', String(button.dataset.language === value));
-      }
-      updatePhotoLabels();
-    }
-
-    let savedLanguage;
-    try {
-      savedLanguage = localStorage.getItem(languageKey);
-    } catch {
-      // The language switch still works when storage is disabled.
-    }
-    setLanguage(savedLanguage === 'ru' ? 'ru' : 'en');
-
-    for (const button of buttons) {
-      button.addEventListener('click', () => {
-        setLanguage(button.dataset.language);
-        try {
-          localStorage.setItem(languageKey, language);
-        } catch {
-          // Keep the selection for this visit.
+        const photo = next.querySelector('.earth img');
+        const readyPhoto = new Image(photo.width, photo.height);
+        for (const attribute of ['alt', 'data-ru-alt', 'src']) {
+          readyPhoto.setAttribute(attribute, photo.getAttribute(attribute));
         }
-      });
+        await readyPhoto.decode();
+        photo.replaceWith(readyPhoto);
+        setLanguage(next);
+        const focusedLanguage = document.activeElement?.dataset.language;
+        current.replaceWith(next);
+        if (focusedLanguage) {
+          next.querySelector(`[data-language="${focusedLanguage}"]`)?.focus({ preventScroll: true });
+        }
+      } catch {
+        // Keep the complete published edition visible until the next check.
+      } finally {
+        refreshing = false;
+      }
     }
 
-    async function loadDailyPhoto() {
-      const response = await fetch(feed, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`NASA APOD: HTTP ${response.status}`);
-
-      const entries = await response.json();
-      const entry = entries.find(item => item.media_type === 'image' && item.hdurl?.startsWith('https://'));
-      if (!entry) throw new Error('NASA APOD: no image in feed');
-      if (entry.date === currentPhoto?.date) return;
-
-      const candidate = new Image();
-      candidate.src = entry.hdurl;
-      await candidate.decode();
-
-      const credit = document.createElement('template');
-      credit.innerHTML = entry.credit || entry.copyright || '';
-      currentPhoto = { ...entry, credit: credit.content.textContent.trim() };
-      picture.replaceWith(candidate);
-      picture = candidate;
-      creditLink.href = entry.permalink?.startsWith('https://')
-        ? entry.permalink
-        : 'https://science.nasa.gov/apod/';
-      updatePhotoLabels();
-      photoStatus.hidden = true;
-      photoFrame.hidden = false;
-    }
-
-    function refreshPhoto() {
-      const now = new Date();
-      const next = new Date(now);
-      // Check after the APOD release in either Eastern time offset.
-      next.setUTCHours(5, 15, 0, 0);
-      if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
-      setTimeout(refreshPhoto, next - now);
-      loadDailyPhoto().catch(error => {
-        photoUnavailable = true;
-        updatePhotoLabels();
-        console.warn(error);
-      });
-    }
-
-    refreshPhoto();
+    setInterval(refreshEdition, 60_000);
+    document.addEventListener('visibilitychange', refreshEdition);
   </script>
 </body>
 </html>
