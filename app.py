@@ -39,7 +39,6 @@ def home():
         "index.html", edition=edition, labels=format_date(day), source=source,
         eclipses=format_list(facts["eclipses"], ("No solar or lunar eclipses", "Солнечных и лунных нет")),
         retrograde=format_list(facts["retrograde"], ("None", "Нет")),
-        photo_date=format_date(edition["photo"]["date"]),
     ))
     response.headers["Cache-Control"] = "no-store"
     return response
