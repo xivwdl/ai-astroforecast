@@ -4,6 +4,7 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from time import sleep
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
 
@@ -14,6 +15,7 @@ from upstream import get_json
 DATA_DIR = Path(os.environ.get("DATA_DIR", "data")).resolve()
 EPHE_DIR = Path(os.environ.get("EPHE_DIR", "ephe")).resolve()
 DEFAULT_MODEL = "glm-4.7-flash"
+ZAI_URL = "https://api.z.ai/api/paas/v4/chat/completions"
 SECTIONS = ("overview", "moon", "advice")
 PROMPT = """
 Write one short astrology column from the supplied calculated facts. Write the
@@ -49,9 +51,8 @@ def generate(day, facts, model, api_key):
         "eclipses": [item[0] for item in facts["eclipses"]],
         "retrograde": [item[0] for item in facts["retrograde"]],
     }
-    result = get_json(
-        "https://api.z.ai/api/paas/v4/chat/completions",
-        payload={
+    result = request_forecast(
+        {
             "model": model,
             "messages": [
                 {"role": "system", "content": PROMPT.strip()},
@@ -62,8 +63,7 @@ def generate(day, facts, model, api_key):
             "thinking": {"type": "disabled"},
             "response_format": {"type": "json_object"},
         },
-        token=api_key,
-        timeout=75,
+        api_key,
     )
     choice = result["choices"][0]
     if choice.get("finish_reason") != "stop":
@@ -140,22 +140,50 @@ def publish(now=None):
         print(f"Published {day} with {photo['source']}")
 
 
-def describe_http_error(error):
+def zai_error_code(error):
+    try:
+        with error:
+            code = json.loads(error.read(8192))["error"]["code"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if isinstance(code, (str, int)) and str(code).isascii() and str(code).isdigit() and len(str(code)) <= 8:
+        return str(code)
+    return None
+
+
+def retry_after_seconds(error):
+    value = error.headers.get("Retry-After") if error.headers else None
+    if value and value.isascii() and value.isdigit() and len(value) <= 8:
+        return int(value)
+    return None
+
+
+def describe_http_error(error, zai_code=None):
     host = urlsplit(error.url).hostname
     service = {"api.z.ai": "Z.ai", "science.nasa.gov": "NASA APOD"}.get(host, "Upstream")
     message = f"{service} returned HTTP {error.code}"
-    if service == "Z.ai":
-        try:
-            payload = json.loads(error.read(8192))
-            code = payload["error"]["code"]
-            if isinstance(code, (str, int)) and str(code).isascii() and str(code).isdigit() and len(str(code)) <= 8:
-                message += f" (Z.ai code {code})"
-        except (OSError, ValueError, KeyError, TypeError):
-            pass
-    retry_after = error.headers.get("Retry-After") if error.headers else None
-    if retry_after and retry_after.isascii() and retry_after.isdigit() and len(retry_after) <= 8:
+    if zai_code:
+        message += f" (Z.ai code {zai_code})"
+    if (retry_after := retry_after_seconds(error)) is not None:
         message += f", retry after {retry_after} seconds"
     return message
+
+
+def request_forecast(payload, api_key):
+    for retry_delay in (3, 8, None):
+        try:
+            return get_json(ZAI_URL, payload=payload, token=api_key, timeout=75)
+        except HTTPError as error:
+            code = zai_error_code(error)
+            message = describe_http_error(error, code)
+            if error.code != 429 or code != "1305" or retry_delay is None:
+                raise RuntimeError(message) from None
+
+            delay = max(retry_delay, retry_after_seconds(error) or 0)
+            if delay > 15:
+                raise RuntimeError(message) from None
+            print(f"{message}. Retrying in {delay} seconds.", flush=True)
+            sleep(delay)
 
 
 if __name__ == "__main__":
